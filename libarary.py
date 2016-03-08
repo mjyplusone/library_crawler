@@ -3,6 +3,22 @@ from bs4 import BeautifulSoup
 import re
 import urllib.parse
 import libarary_func
+import sqlite3
+
+#创建SQlite数据库
+conn = sqlite3.connect('library.db')
+print ("Opened database successfully")
+
+conn.execute('''CREATE TABLE LIBRARY
+	        (ID       INT     PRIMARY KEY    NOT NULL,
+	         NAME     TEXT,
+	         YEAR     INT,
+	         NUM      REAL,
+	         URL      TEXT  );''')
+print ("Table created successfully")
+id=1
+
+
 
 url="http://202.195.144.118:8080/browse/cls_browsing_tree.php"
 s_doctype = "all"
@@ -58,10 +74,38 @@ for i in range(0,22):
 
 		for j in range(0,page):
 			if j==0:
-				libarary_func.page("http://202.195.144.118:8080/browse/cls_browsing_book.php?"+"s_doctype="+s_doctype+"&cls="+label[i]+"&clsname="+url_add[i])
-			else:				
-				libarary_func.page("http://202.195.144.118:8080/browse/cls_browsing_book.php?"+"s_doctype="+s_doctype+"&cls="+label[i]+"&clsname="+'&&page='+str(j+1))
-				
+				str1 = "http://202.195.144.118:8080/browse/cls_browsing_book.php?"+"s_doctype="+s_doctype+"&cls="+label[i]+"&clsname="+url_add[i]				
+				conn.execute("INSERT INTO LIBRARY (ID,URL) \
+      				VALUES ("+str(id)+",'%s')"%str1);
+				id += 1
+				#libarary_func.page("http://202.195.144.118:8080/browse/cls_browsing_book.php?"+"s_doctype="+s_doctype+"&cls="+label[i]+"&clsname="+url_add[i])
+			else:
+				str1 = "http://202.195.144.118:8080/browse/cls_browsing_book.php?"+"s_doctype="+s_doctype+"&cls="+label[i]+"&clsname="+'&&page='+str(j+1)
+				conn.execute("INSERT INTO LIBRARY (ID,URL) \
+      				VALUES ("+str(id)+",'%s')"%str1);
+				id += 1			
+				#libarary_func.page("http://202.195.144.118:8080/browse/cls_browsing_book.php?"+"s_doctype="+s_doctype+"&cls="+label[i]+"&clsname="+'&&page='+str(j+1))
+		
+conn.commit()
+print ("Records created successfully")
+conn.close()
+		# #写入数据库
+		# conn.execute("INSERT INTO LIBRARY (ID,NAME,YEAR,NUM) \
+	 #     VALUES (1, 'Paul', 32,  20000.00 )");
+
+		# conn.execute("INSERT INTO LIBRARY (ID,NAME,YEAR,NUM) \
+	 #     VALUES (2, 'Allen', 25, 15000.00 )");
+
+		# conn.execute("INSERT INTO LIBRARY (ID,NAME,YEAR,NUM) \
+	 #     VALUES (3, 'Teddy', 23, 20000.00 )");
+
+		# conn.execute("INSERT INTO LIBRARY (ID,NAME,YEAR,NUM) \
+	 #     VALUES (4, 'Mark', 25, 65000.00 )");
+
+		# conn.commit()
+		# print ("Records created successfully")
+
+
 		# for div in soup.find_all('div',class_='list_books'):
 		# 	link = div.find('a')
 
