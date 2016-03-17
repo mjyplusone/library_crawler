@@ -1,16 +1,24 @@
 import requests
 from bs4 import BeautifulSoup
 import re
+import library_http
 
 def page(url):
 	book_name = []    #书名
 	book_year = []    #出版日期
 	book_num = []     #借阅次数
 
-	r = requests.get(url)
-	print(r.url)
-	r.encoding = 'utf-8'
-	soup = BeautifulSoup(r.text,"html.parser")
+	#加入异常处理
+	print(url)
+	r = library_http.HTTP()
+	r.setget(url)
+	soup = r.getpage()
+
+	#未加入异常处理
+	# r = requests.get(url)
+	# print(r.url)
+	# r.encoding = 'utf-8'
+	# soup = BeautifulSoup(r.text,"html.parser")
 
 	for div in soup.find_all('div',class_='list_books'):
 		link = div.find('a')
@@ -28,9 +36,12 @@ def page(url):
 		url = link.get('href')
 		m = re.search( r"(?<=/).+", url)
 		book_url = "http://202.195.144.118:8080/"+m.group(0)    #详细信息界面
-		r = requests.get(book_url)
-		r.encoding='utf-8'
-		soup2 = BeautifulSoup(r.text,"html.parser")
+		r = library_http.HTTP()
+		r.setget(book_url)
+		soup2 = r.getpage()
+		# r = requests.get(book_url)
+		# r.encoding='utf-8'
+		# soup2 = BeautifulSoup(r.text,"html.parser")
 		marc = soup2.find("p",id="marc")
 		marc = marc.getText()
 		m = re.findall( r'\d+', marc)    #匹配出浏览次数和借阅次数
