@@ -7,9 +7,8 @@ class HTTP:
 	def getpage(self):
 		try:
 			r = requests.get(self.url)
-		except:print("Error!")
+		except:return None
 		else:
 			r.encoding='utf-8'
 			soup = BeautifulSoup(r.text,"html.parser")
 			return soup
-	
