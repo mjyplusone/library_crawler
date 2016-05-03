@@ -41,16 +41,13 @@ def pagefind(url,Label):
 		book_num.append(m[1])            #存储借阅次数
 
 		book_label.append(Label)         #所属标签
-				
-		workQueue2.put(book_label[-1])
-		workQueue2.put(book_name[-1])
-		workQueue2.put(book_year[-1])
-		workQueue2.put(book_num[-1])
-     
-	print(book_label)   
-	print(book_name)
-	print(book_year)
-	print(book_num)
+		
+		workQueue2.put([book_label[-1],book_name[-1],book_year[-1],book_num[-1]])		
+
+	# print(book_label)   
+	# print(book_name)
+	# print(book_year)
+	# print(book_num)
 #-------------------------------------------------------------------------
 
 
@@ -60,56 +57,70 @@ exitFlag = 0
 
 #获取数据线程类
 class myThread (threading.Thread):
-	def __init__(self, threadID, name, q):
+	def __init__(self, threadID, name):
 		threading.Thread.__init__(self)
 		self.threadID = threadID
 		self.name = name
-		self.q = q
 	def run(self):
 		print ("Starting " + self.name)
-		process_data(self.name, self.q)
+		process_data(self.name)
 		print ("Exiting " + self.name)
 
-def process_data(threadName, q):
-    while not exitFlag:
-        queueLock.acquire()
-        if not workQueue.empty():
-            data1 = q.get()
-            data2 = q.get()
-            pagefind(data1,data2)
-            queueLock.release()
-            print ("%s processing %s\n" % (threadName, data1))
-        else:
-            queueLock.release()
-        time.sleep(1)
+def process_data(threadName):
+	while not exitFlag:
+		if not workQueue.empty():
+			data = workQueue.get()
+			pagefind(data[0],data[1])
+			print ("%s processing %s\n" % (threadName, data[0]))
+		time.sleep(1)
 
 #操作数据库线程类
 class myThread2 (threading.Thread):
-	def __init__(self, threadID, name, q):
+	def __init__(self, threadID, name):
 		threading.Thread.__init__(self)
 		self.threadID = threadID
 		self.name = name
-		self.q = q
 	def run(self):
+		print ("Starting " + self.name)
+		all = 0
 		#打开SQlite数据库
 		conn = sqlite3.connect('library_crawler.db')
 		print ("Opened database successfully")
-		print ("Starting " + self.name)
 		while not exitFlag:
-			if not workQueue2.empty():
-				sq_data1 = self.q.get()
-				sq_data2 = self.q.get()
-				sq_data3 = self.q.get()
-				sq_data4 = self.q.get()
-				conn.execute("INSERT INTO '%s' (BOOK_NAME,BOOK_YEAR,BOOK_NUM) VALUES ('%s','%s','%s')"%(sq_data1,sq_data2,sq_data3,sq_data4))
-				conn.commit()  
+			Lock.acquire()
+			sq_data = []
+			while not workQueue2.empty():
+				sq_data.append(workQueue2.get())
+			Lock.release()
+			all += len(sq_data)
+			for i in range(len(sq_data)):
+				conn.execute("INSERT INTO '%s' (BOOK_NAME,BOOK_YEAR,BOOK_NUM) VALUES ('%s','%s','%s')"%(sq_data[i][0],sq_data[i][1],sq_data[i][2],sq_data[i][3]))		
+			conn.commit()  
+			print('Total number is: '+str(all))
+			time.sleep(5)
 		print ("Records created successfully")
 		conn.close()
 		print ("Exiting " + self.name)
+		# #打开SQlite数据库
+		# conn = sqlite3.connect('library_crawler.db')
+		# print ("Opened database successfully")
+		# print ("Starting " + self.name)
+		# while not exitFlag:
+		# 	if not workQueue2.empty():
+		# 		sq_data = workQueue2.get()
+		# 		# sq_data1 = workQueue2.get()
+		# 		# sq_data2 = workQueue2.get()
+		# 		# sq_data3 = workQueue2.get()
+		# 		# sq_data4 = workQueue2.get()
+		# 		conn.execute("INSERT INTO '%s' (BOOK_NAME,BOOK_YEAR,BOOK_NUM) VALUES ('%s','%s','%s')"%(sq_data[0],sq_data[1],sq_data[2],sq_data[3]))
+		# 		conn.commit()  
+		# print ("Records created successfully")
+		# conn.close()
+		# print ("Exiting " + self.name)
 #-------------------------------------------------------------------------
 
 
-queueLock = threading.Lock()
+Lock = threading.Lock()
 workQueue = queue.Queue()
 workQueue2 = queue.Queue()
 threads = []
@@ -122,16 +133,16 @@ book_num = []     #借阅次数
 
 # 创建新线程
 #获取数据线程
-thread1 = myThread(1, "Thread-1", workQueue)
+thread1 = myThread(1, "Thread-1")
 thread1.start()
 threads.append(thread1)
 
-thread2 = myThread(2, "Thread-2", workQueue)
+thread2 = myThread(2, "Thread-2")
 thread2.start()
 threads.append(thread2)
 
 #操作数据库线程
-thread_sq = myThread2(3, "Thread-sq", workQueue2)
+thread_sq = myThread2(3, "Thread-sq")
 thread_sq.start()
 threads.append(thread_sq)
 
@@ -140,9 +151,9 @@ url="http://202.195.144.118:8080/browse/cls_browsing_tree.php"
 s_doctype = "all"
 cls = ['A','B','C','D','E','F','G','H','I','J','K','N','O','P','Q','R','S','T','U','V','X','Z']
 lvl = ['1#nodeA','1#nodeB','1#nodeC','1#nodeD','1#nodeE','1#nodeF',
-	   '1#nodeG','1#nodeH','1#nodeI','1#nodeJ','1#nodeK','1#nodeN',
-	   '1#nodeO','1#nodeP','1#nodeQ','1#nodeR','1#nodeS','1#nodeT',
-	   '1#nodeU','1#nodeV','1#nodeX','1#nodeZ']
+		'1#nodeG','1#nodeH','1#nodeI','1#nodeJ','1#nodeK','1#nodeN',
+		'1#nodeO','1#nodeP','1#nodeQ','1#nodeR','1#nodeS','1#nodeT',
+		'1#nodeU','1#nodeV','1#nodeX','1#nodeZ']
 for i in range(0,22):
 	url="http://202.195.144.118:8080/browse/cls_browsing_tree.php?"+"s_doctype="+s_doctype+"&cls="+cls[i]+"&lvl="+lvl[i]
 	r = library_http.HTTP()
@@ -188,18 +199,12 @@ for i in range(0,22):
 				#conn.execute("INSERT INTO PAGE (LABEL,URL) VALUES ('%s', '%s')"%(label[i],str1));
 				#pagefind("http://202.195.144.118:8080/browse/cls_browsing_book.php?"+"s_doctype="+s_doctype+"&cls="+label[i]+"&clsname="+url_add[i],label[i])
 				# 填充队列
-				queueLock.acquire()
-				workQueue.put(str1)
-				workQueue.put(label[i])
-				queueLock.release()
+				workQueue.put([str1,label[i]])
 			else:
 				str1 = "http://202.195.144.118:8080/browse/cls_browsing_book.php?"+"s_doctype="+s_doctype+"&cls="+label[i]+"&clsname="+'&&page='+str(j+1)
 				#conn.execute("INSERT INTO PAGE (LABEL,URL) VALUES ('%s', '%s')"%(label[i],str1));
 				#pagefind("http://202.195.144.118:8080/browse/cls_browsing_book.php?"+"s_doctype="+s_doctype+"&cls="+label[i]+"&clsname="+'&&page='+str(j+1),label[i])
-				queueLock.acquire()
-				workQueue.put(str1)
-				workQueue.put(label[i])
-				queueLock.release()
+				workQueue.put([str1,label[i]])
 
 		#conn.commit()
 
@@ -212,12 +217,12 @@ for i in range(0,22):
 
 # 等待队列清空
 while not workQueue.empty():
-    pass
+	pass
 
 # 通知线程是时候退出
 exitFlag = 1
 
 # 等待所有线程完成
 for t in threads:
-    t.join()
+	t.join()
 print ("Exiting Main Thread")
