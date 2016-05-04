@@ -42,7 +42,7 @@ def pagefind(url,Label):
 
 		book_label.append(Label)         #所属标签
 		
-		workQueue2.put([book_label[-1],book_name[-1],book_year[-1],book_num[-1]])		
+		DataQueue.put([book_label[-1],book_name[-1],book_year[-1],book_num[-1]])		
 
 	# print(book_label)   
 	# print(book_name)
@@ -56,7 +56,7 @@ def pagefind(url,Label):
 exitFlag = 0
 
 #获取数据线程类
-class myThread (threading.Thread):
+class DataThread (threading.Thread):
 	def __init__(self, threadID, name):
 		threading.Thread.__init__(self)
 		self.threadID = threadID
@@ -68,14 +68,14 @@ class myThread (threading.Thread):
 
 def process_data(threadName):
 	while not exitFlag:
-		if not workQueue.empty():
-			data = workQueue.get()
-			pagefind(data[0],data[1])
-			print ("%s processing %s\n" % (threadName, data[0]))
+		if not UrlQueue.empty():
+			url_data = UrlQueue.get()
+			pagefind(url_data[0],url_data[1])
+			print ("%s processing %s\n" % (threadName, url_data[0]))
 		time.sleep(1)
 
 #操作数据库线程类
-class myThread2 (threading.Thread):
+class SqThread (threading.Thread):
 	def __init__(self, threadID, name):
 		threading.Thread.__init__(self)
 		self.threadID = threadID
@@ -89,8 +89,8 @@ class myThread2 (threading.Thread):
 		while not exitFlag:
 			Lock.acquire()
 			sq_data = []
-			while not workQueue2.empty():
-				sq_data.append(workQueue2.get())
+			while not DataQueue.empty():
+				sq_data.append(DataQueue.get())
 			Lock.release()
 			all += len(sq_data)
 			for i in range(len(sq_data)):
@@ -121,8 +121,8 @@ class myThread2 (threading.Thread):
 
 
 Lock = threading.Lock()
-workQueue = queue.Queue()
-workQueue2 = queue.Queue()
+UrlQueue = queue.Queue()
+DataQueue = queue.Queue()
 threads = []
 
 #获得的信息
@@ -133,16 +133,16 @@ book_num = []     #借阅次数
 
 # 创建新线程
 #获取数据线程
-thread1 = myThread(1, "Thread-1")
+thread1 = DataThread(1, "Thread-1")
 thread1.start()
 threads.append(thread1)
 
-thread2 = myThread(2, "Thread-2")
+thread2 = DataThread(2, "Thread-2")
 thread2.start()
 threads.append(thread2)
 
 #操作数据库线程
-thread_sq = myThread2(3, "Thread-sq")
+thread_sq = SqThread(3, "Thread-sq")
 thread_sq.start()
 threads.append(thread_sq)
 
@@ -199,12 +199,12 @@ for i in range(0,22):
 				#conn.execute("INSERT INTO PAGE (LABEL,URL) VALUES ('%s', '%s')"%(label[i],str1));
 				#pagefind("http://202.195.144.118:8080/browse/cls_browsing_book.php?"+"s_doctype="+s_doctype+"&cls="+label[i]+"&clsname="+url_add[i],label[i])
 				# 填充队列
-				workQueue.put([str1,label[i]])
+				UrlQueue.put([str1,label[i]])
 			else:
 				str1 = "http://202.195.144.118:8080/browse/cls_browsing_book.php?"+"s_doctype="+s_doctype+"&cls="+label[i]+"&clsname="+'&&page='+str(j+1)
 				#conn.execute("INSERT INTO PAGE (LABEL,URL) VALUES ('%s', '%s')"%(label[i],str1));
 				#pagefind("http://202.195.144.118:8080/browse/cls_browsing_book.php?"+"s_doctype="+s_doctype+"&cls="+label[i]+"&clsname="+'&&page='+str(j+1),label[i])
-				workQueue.put([str1,label[i]])
+				UrlQueue.put([str1,label[i]])
 
 		#conn.commit()
 
@@ -216,7 +216,7 @@ for i in range(0,22):
 		# print ("Table created successfully");
 
 # 等待队列清空
-while not workQueue.empty():
+while not (UrlQueue.empty() and DataQueue.empty()):
 	pass
 
 # 通知线程是时候退出
